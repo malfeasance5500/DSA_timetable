@@ -108,7 +108,6 @@ class Main {
         break;
       case "3":
         return;
-        break;
     }
   }
   sort_options() {
@@ -127,33 +126,38 @@ class Main {
     switch (choice) {
       case "0":
         this.table.radix_sort("id");
-
         break;
       case "1":
+        this.table.alpha_radix_sort("name");
         break;
       case "2":
+        this.table.alpha_radix_sort("description");
         break;
       case "3":
-        this.table.radix_sort("activity_date", true);
+        this.table.radix_sort("activity_date", { isDate: true });
       case "4":
+        this.table.alpha_radix_sort("scheduled_day");
         break;
       case "5":
-        this.table.radix_sort("scheduled_start_time", false, true);
+        this.table.radix_sort("scheduled_start_time", { isTime: true });
         break;
       case "6":
-        this.table.radix_sort("scheduled_end_time", false, true);
+        this.table.radix_sort("scheduled_end_time", { isTime: true });
         break;
       case "7":
-        this.table.radix_sort("duration", false, true);
+        this.table.radix_sort("duration", { isTime: true });
         break;
       case "8":
+        this.table.alpha_radix_sort("allocated_location");
         break;
       case "9":
         this.table.radix_sort("planned_size");
         break;
       case "10":
+        this.table.alpha_radix_sort("allocated_staff");
         break;
       case "11":
+        this.table.alpha_radix_sort("zone");
         break;
     }
   }
@@ -235,15 +239,17 @@ class Timetable {
     console.table(this.entries);
   }
 
-  max_num(header, isDate = false, isTime = false) {
+  max_num(header, { isDate = false, isTime = false, isAlpha = false }) {
     var max = -1;
     for (var entry of this.entries) {
       var data = entry[header];
       if (isDate) data = this.convertDate(data);
       if (isTime) data = this.convertTime(data);
+      if (isAlpha) data = this.convertAlpha(header, data).length;
       if (data > max) max = data;
     }
-    return this.max_digits(max);
+    if (!isAlpha) return this.max_digits(max);
+    return max;
   }
 
   max_digits(num) {
@@ -276,8 +282,23 @@ class Timetable {
     return total;
   }
 
-  radix_sort(header, isDate = false, isTime = false) {
-    var max_digit = this.max_num(header, isDate, isTime);
+  convertAlpha(header, text) {
+    switch (header) {
+      case "name":
+        text = text.split("DICT-DNDFC_221_");
+        return text[1];
+      case "description":
+        text = text.split("(");
+        text = text[text.length - 1];
+        text = text.split(")")[0];
+        return text;
+      default:
+        return text;
+    }
+  }
+
+  radix_sort(header, { isDate = false, isTime = false }) {
+    var max_digit = this.max_num(header, { isDate, isTime });
     for (var i = 0; i < max_digit; i++) {
       var bucket = [[], [], [], [], [], [], [], [], [], []];
       for (var entry = 0; entry < this.entries.length; entry++) {
@@ -287,6 +308,30 @@ class Timetable {
 
         var digit = this.get_digit(entry_data, i);
         bucket[digit].push(this.entries[entry]);
+      }
+      this.entries = bucket.flat();
+    }
+    return this.entries;
+  }
+
+  getChara(text, idx) {
+    idx = text.length - idx - 1;
+    if (idx < 0) return 0;
+    var chara = text[idx].charCodeAt(0) - 32;
+    return chara;
+  }
+
+  alpha_radix_sort(header) {
+    var max_digit = this.max_num(header, { isAlpha: true });
+    for (var i = 0; i < max_digit; i++) {
+      var bucket = [];
+      for (var bucket_space = 0; bucket_space < 90; bucket_space++) {
+        bucket.push([]);
+      }
+      for (var data = 0; data < this.entries.length; data++) {
+        var data_entry = this.convertAlpha(header, this.entries[data][header]);
+        var chara = this.getChara(data_entry, i);
+        bucket[chara].push(this.entries[data]);
       }
       this.entries = bucket.flat();
     }
