@@ -87,6 +87,8 @@ class Main {
       var choice = readline.question(choice_string);
     }
 
+    console.clear();
+
     // Case statements for each option
     switch (choice) {
       case "0":
@@ -96,7 +98,8 @@ class Main {
         break;
       case "1":
         //   Display sort options
-        console.log("1 has been chosen");
+        this.sort_options();
+        this.table.display();
         this.main();
         break;
       case "2":
@@ -104,6 +107,53 @@ class Main {
         this.table_check();
         break;
       case "3":
+        return;
+        break;
+    }
+  }
+  sort_options() {
+    // Display the options for sorting
+    var choice_string = `Sort by:\n0. ID / Index\n1. Name\n2. Description\n3.Activity Date\n4.Scheduled Day\n5.Scheduled Start Time\n6. Scheduled End Time\n7.Duration\n8. Allocated Location\n9. Planned Size\n10. Allocated Staff \n11. Zone\n`;
+    var choice = readline.question(choice_string);
+
+    while (isNaN(choice) || choice.length == 0 || choice < 0 || choice > 11) {
+      console.clear();
+      console.log(
+        "Invalid Input. Enter an integer within the following range 0-11"
+      );
+      var choice = readline.question(choice_string);
+    }
+
+    switch (choice) {
+      case "0":
+        this.table.radix_sort("id");
+
+        break;
+      case "1":
+        break;
+      case "2":
+        break;
+      case "3":
+        this.table.radix_sort("activity_date", true);
+      case "4":
+        break;
+      case "5":
+        this.table.radix_sort("scheduled_start_time", false, true);
+        break;
+      case "6":
+        this.table.radix_sort("scheduled_end_time", false, true);
+        break;
+      case "7":
+        this.table.radix_sort("duration", false, true);
+        break;
+      case "8":
+        break;
+      case "9":
+        this.table.radix_sort("planned_size");
+        break;
+      case "10":
+        break;
+      case "11":
         break;
     }
   }
@@ -183,6 +233,64 @@ class Timetable {
   display() {
     console.clear();
     console.table(this.entries);
+  }
+
+  max_num(header, isDate = false, isTime = false) {
+    var max = -1;
+    for (var entry of this.entries) {
+      var data = entry[header];
+      if (isDate) data = this.convertDate(data);
+      if (isTime) data = this.convertTime(data);
+      if (data > max) max = data;
+    }
+    return this.max_digits(max);
+  }
+
+  max_digits(num) {
+    return String(num).length;
+  }
+
+  get_digit(num, idx) {
+    // Get value of digit at index
+    // Index goes from right to left
+    num = String(num);
+    var idx = num.length - idx - 1;
+    if (idx < 0) return 0;
+    else return Number(num[idx]);
+  }
+
+  convertDate(date) {
+    date = date.split("/");
+    date = `${date[1]}/${date[0]}/${date[2]}`;
+    date = new Date(date);
+    return date.getTime();
+  }
+
+  convertTime(time) {
+    time = time.split(":");
+    var total = 0;
+    for (var i = 0; i < time.length; i++) {
+      if (i == 2) total += Number(time[i]);
+      else total += Number(time[i]) * Math.pow(60, 2 - i);
+    }
+    return total;
+  }
+
+  radix_sort(header, isDate = false, isTime = false) {
+    var max_digit = this.max_num(header, isDate, isTime);
+    for (var i = 0; i < max_digit; i++) {
+      var bucket = [[], [], [], [], [], [], [], [], [], []];
+      for (var entry = 0; entry < this.entries.length; entry++) {
+        var entry_data = this.entries[entry][header];
+        if (isDate) entry_data = this.convertDate(entry_data);
+        if (isTime) entry_data = this.convertTime(entry_data);
+
+        var digit = this.get_digit(entry_data, i);
+        bucket[digit].push(this.entries[entry]);
+      }
+      this.entries = bucket.flat();
+    }
+    return this.entries;
   }
 }
 
